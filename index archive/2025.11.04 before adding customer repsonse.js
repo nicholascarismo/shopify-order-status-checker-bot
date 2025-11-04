@@ -123,59 +123,6 @@ function adminOrderUrlFromGid(gid) {
     : `https://${SHOPIFY_DOMAIN}/admin`;
 }
 
-/* =========================
-   Suggested Customer Response Builder
-========================= */
-function buildSuggestedResponse(order) {
-  const firstName = order?.customer?.displayName?.split(' ')?.[0] || 'there';
-  const mf = {
-    weeks: parseFloat(order?.weeksSinceOrder?.value || 0),
-    arrangeStatus: (order?.arrangeStatus?.value || '').toUpperCase(),
-    incoming: (order?.incoming?.value || '').toUpperCase(),
-    readyToContact: (order?.readyToContact?.value || '').toUpperCase(),
-    displayFulfillmentStatus: (order?.displayFulfillmentStatus || '').toUpperCase()
-  };
-
-  const isFulfilled = mf.displayFulfillmentStatus === 'FULFILLED';
-  const greeting = `Hi ${firstName},`;
-  const closing = `\n\nBest,\nThe Carismo Team`;
-  let body = '';
-
-  // --- Logic mapping ---
-  if (isFulfilled) {
-    // No suggested response
-    return null;
-  } else if (mf.readyToContact === 'READY TO CONTACT') {
-    body = `Good news—your order is already complete and here waiting for next steps.\n\nIf you plan on coming to our shop to pick up your order, please use this link to schedule a time for pickup: https://carismodesign.com/pages/schedule-order-pick-up\n\nIf you would like to schedule an in-house installation, please use this link to make an appointment: https://carismodesign.com/pages/schedule-installation\n\nIf you owe a balance on your order, you should have received a payment link for that balance in your email. Once complete, we can release your order to you.`;
-  } else if (mf.readyToContact === 'CONTACT LATER') {
-    // No suggested response
-    return null;
-  } else if (mf.incoming === 'INCOMING') {
-    body = `It looks like your order is on track to finishing up in around 1-2 weeks. From there, we just need a few extra days for final quality checks and photography before we can get this shipped out to you. We’ll be reaching out to you here in email as soon as we’re all done with those and it’s ready to ship!\n\nThanks for your patience! We’re excited to get this out to you soon!`;
-  } else if (mf.arrangeStatus === 'NEED TO ARRANGE') {
-    // No suggested response
-    return null;
-  } else if (mf.arrangeStatus === 'ARRANGED') {
-    const w = mf.weeks;
-    if (w <= 3) {
-      body = `It looks like we’re only about ${w} weeks into the 6–8 week build timeline. There won’t be any notable updates until we’re closer to the 6–8 week point. Rest assured, your order is already in progress and on track so we’ll be reaching out to you here in email as soon as it’s complete and ready to ship!\n\nLooking forward to finishing this up and seeing it installed in your car soon!`;
-    } else if (w > 3 && w <= 6) {
-      body = `It looks like we’re about ${w} weeks into the ~8 week build timeline. We should be wrapping up with production in a few weeks if there are no major issues along the way. We’ll be reaching out to you here in email as soon as it’s complete and ready to ship!\n\nLooking forward to finishing this up and seeing it installed in your car soon!`;
-    } else {
-      body = `Thanks for your patience—your order is in production and now about ${w} weeks in. It’s running a little long due to some unforeseen, but minor, issues and we’re already on top of it to try to get your order back on track for as close to an 8 week timeline as possible. We’ll be reaching out to you here in email as soon as it’s complete and ready to ship!\n\nLooking forward to finishing this up and seeing it installed in your car soon!`;
-    }
-  }
-
-  if (!body) return null;
-
-  return {
-    greeting,
-    body,
-    closing,
-    formatted: `${greeting}\n\n${body}${closing}`
-  };
-}
-
 /**
  * Build concise status + relevant details, per your rules.
  * Returns { headerText, blurbLines: string[], details: Array<{label, value}>, footer: string[] }
@@ -348,26 +295,6 @@ app.event('message', async ({ event, client }) => {
         for (const chunk of fieldChunks) {
           blocks.push({ type: 'section', fields: chunk });
         }
-      }
-
-            // Suggested Response Section (always runs, independent of logic)
-      const suggested = buildSuggestedResponse(order);
-      if (suggested) {
-        blocks.push({ type: 'divider' });
-        blocks.push({
-          type: 'header',
-          text: { type: 'plain_text', text: 'Suggested Response to Customer' }
-        });
-        blocks.push({
-          type: 'context',
-          elements: [
-            { type: 'mrkdwn', text: '_Please review and adjust as needed based on your current communications with the customer._' }
-          ]
-        });
-        blocks.push({
-          type: 'section',
-          text: { type: 'mrkdwn', text: `\`\`\`${suggested.formatted}\`\`\`` }
-        });
       }
 
       blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: footer.join(' • ') }] });
